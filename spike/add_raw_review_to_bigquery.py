@@ -1,12 +1,24 @@
 import pandas as pd
 from google.cloud import bigquery
 import datetime
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file
+load_dotenv()
 
 # --- Configuration ---
-# Replace with your actual project ID, dataset ID, and table ID
-PROJECT_ID = "your-gcp-project-id"
-DATASET_ID = "your_dataset_name"
-TABLE_ID = "your_table_name"
+# Read configuration from environment variables
+PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+DATASET_ID = os.getenv("BIGQUERY_DATASET_ID")
+TABLE_ID = os.getenv("BIGQUERY_TABLE_ID")
+
+# --- Validate Configuration ---
+if not all([PROJECT_ID, DATASET_ID, TABLE_ID]):
+    raise ValueError(
+        "Missing required environment variables. "
+        "Please create a .env file and set GCP_PROJECT_ID, BIGQUERY_DATASET_ID, and BIGQUERY_TABLE_ID."
+    )
 
 # The full table ID in the format 'project.dataset.table'
 FULL_TABLE_ID = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}"
