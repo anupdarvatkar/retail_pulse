@@ -1,0 +1,87 @@
+{
+  "bigquery_target": {
+    "dataset_id": "RETAIL_PULSE"
+  },
+  "schemas": {
+    "events_v1": {
+      "table_id": "EVENT_DATA",
+      "data_file": "sample_data_events.jsonl",
+      "definition": [
+        {
+          "name": "event_id",
+          "type": "INTEGER",
+          "mode": "REQUIRED"
+        },
+        {
+          "name": "user_session_id",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "event_name",
+          "type": "STRING",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "event_timestamp",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE"
+        },
+        {
+          "name": "price_usd",
+          "type": "FLOAT",
+          "mode": "NULLABLE"
+        }
+      ]
+    },
+    "pulse_raw_data": {
+      "table_id": "RETAIL_PULSE_RAW_DATA",
+      "data_file": "sample_raw_data.jsonl",
+      "definition": [
+        {
+          "name": "id",
+          "type": "STRING",
+          "mode": "REQUIRED",
+          "description": "Unique identifier for the post/review from the source API."
+        },
+        {
+          "name": "source_name",
+          "type": "STRING",
+          "mode": "REQUIRED",
+          "description": "The name of the data source (e.g., 'Twitter', 'Yelp', 'Custom_Review_API')."
+        },
+        {
+          "name": "ingestion_timestamp",
+          "type": "TIMESTAMP",
+          "mode": "REQUIRED",
+          "description": "Timestamp when the row was loaded into BigQuery (ELT completion)."
+        },
+        {
+          "name": "api_retrieved_at",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE",
+          "description": "The timestamp of when the data was retrieved from the source API."
+        },
+        {
+          "name": "raw_json_payload",
+          "type": "JSON",
+          "mode": "REQUIRED",
+          "description": "The complete, unmodified JSON object response from the source API. This is the raw data."
+        },
+        {
+          "name": "_fivetran_synced",
+          "type": "TIMESTAMP",
+          "mode": "NULLABLE",
+          "description": "Fivetran's internal timestamp for sync tracking."
+        },
+        {
+          "name": "_fivetran_id",
+          "type": "STRING",
+          "mode": "NULLABLE",
+          "description": "Fivetran's unique row ID."
+        }
+      ]
+    }
+  },
+  "write_disposition": "WRITE_TRUNCATE"
+}

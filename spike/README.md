@@ -1,56 +1,113 @@
-# Spike: [Descriptive Title of the Spike]
+# BigQuery Data Loader Spike
 
-This directory contains experimental code for [briefly describe the purpose of the spike, e.g., "evaluating a new data processing library"].
+This directory contains a spike for a Python script to load data into Google BigQuery from local newline-delimited JSON files.
 
-## 🎯 Objective
+## Purpose
 
-The primary goal of this spike is to:
-*   [List the main objective, e.g., Evaluate the performance of Google Cloud Vision API for product detection.]
-*   [Another objective, e.g., Determine the feasibility of using Pub/Sub for real-time event processing.]
+The `bigquery_data_loader.py` script provides a configurable way to:
+1.  Define different data schemas and target tables in a `config.json` file.
+2.  Automatically create the BigQuery dataset and table if they don't exist.
+3.  Load data from a specified local NDJSON (`.jsonl`) file into the target BigQuery table.
 
-## 📋 Prerequisites
+This is useful for initial data seeding or bulk-loading data for development and testing environments.
 
-Before you begin, ensure you have the following installed:
-*   Python 3.8+
-*   `pip`
-*   Google Cloud SDK
+## Prerequisites
 
-## ⚙️ Setup
-
-1.  **Authenticate with Google Cloud:**
-    If you are running this locally and need to authenticate to Google Cloud services, run the following command and follow the prompts:
-    ```bash
-    gcloud auth application-default login
+1.  **Python 3**: The script is written in Python.
+2.  **Google Cloud SDK**: You need to have `gcloud` CLI installed and authenticated. Run `gcloud auth application-default login` to authenticate for local development.
+3.  **Python Dependencies**: Install the required packages. It's recommended to create a `requirements.txt` file in the `spike` directory with the following content:
     ```
-
-2.  **Set Up Environment Variables:**
-    Copy the example environment file and fill in your specific Google Cloud details.
-    ```bash
-    cp .env.example .env
-    # Now, edit the .env file with your configuration
+    google-cloud-bigquery
+    python-dotenv
     ```
-
-3.  **Create and activate a virtual environment:**
-    It's highly recommended to use a virtual environment to keep dependencies isolated.
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-
-4.  **Install dependencies:**
-    Install the required Python packages from `requirements.txt`.
+    Then install them using:
     ```bash
     pip install -r requirements.txt
     ```
 
-## ▶️ Running the Spike
+## Configuration
 
-To run the main script for this spike, execute the following command:
+The script relies on a few configuration files.
 
-```sh
-# To add the sample data to the BigQuery table:
-python add_raw_review_to_bigquery.py --action add
+### 1. Environment Variables (`.env`)
 
-# To delete all data from the BigQuery table:
-python add_raw_review_to_bigquery.py --action delete
+Create a `.env` file in the `spike` directory to store your Google Cloud Project ID.
+
 ```
+# .env
+GCP_PROJECT_ID="your-gcp-project-id"
+```
+
+### 2. Main Configuration (`config.json`)
+
+Create a `config.json` file in the `spike` directory. This file defines the BigQuery target, write behavior, and one or more schemas for different data types.
+
+```json
+{
+  "bigquery_target": {
+    "dataset_id": "retail_pulse_dev"
+  },
+  "write_disposition": "WRITE_TRUNCATE",
+  "schemas": {
+    "users": {
+      "table_id": "users",
+      "data_file": "data/users.jsonl",
+      "definition": [
+        { "name": "user_id", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "name", "type": "STRING" },
+        { "name": "email", "type": "STRING" },
+        { "name": "created_at", "type": "TIMESTAMP" }
+      ]
+    },
+    "products": {
+      "table_id": "products",
+      "data_file": "data/products.jsonl",
+      "definition": [
+        { "name": "product_id", "type": "STRING", "mode": "REQUIRED" },
+        { "name": "name", "type": "STRING" },
+        { "name": "price", "type": "FLOAT" }
+      ]
+    }
+  }
+}
+```
+
+**Configuration Details:**
+*   `bigquery_target`:
+    *   `project_id`: (Optional) Your GCP project ID. Can also be set via the `GCP_PROJECT_ID` environment variable.
+    *   `dataset_id`: The name of the BigQuery dataset to use.
+*   `write_disposition`: (Optional) How to write data. Defaults to `WRITE_APPEND`. Other options include `WRITE_TRUNCATE` (overwrite) and `WRITE_EMPTY`.
+*   `schemas`: A dictionary where each key is a unique `schema_name`.
+    *   `table_id`: The name of the target table in BigQuery.
+    *   `data_file`: The relative path to the source data file (must be newline-delimited JSON).
+    *   `definition`: The BigQuery table schema. Each field needs a `name` and `type`. `mode` is optional and defaults to `NULLABLE`.
+
+### 3. Data Files
+
+Create the data files as specified in `config.json`. The files should be in **Newline Delimited JSON (NDJSON)** format. Each line must be a valid JSON object.
+
+Example `data/users.jsonl`:
+```json
+{"user_id": "u001", "name": "Alice", "email": "alice@example.com", "created_at": "2023-01-15T10:00:00Z"}
+{"user_id": "u002", "name": "Bob", "email": "bob@example.com", "created_at": "2023-01-16T11:30:00Z"}
+```
+
+## Usage
+
+Run the script from your terminal, providing the `schema_name` from your `config.json` that you wish to load.
+
+```bash
+# Ensure you are in the 'spike' directory
+
+# To load users data
+python bigquery_data_loader.py users
+
+# To load products data
+python bigquery_data_loader.py products
+```
+
+The script will:
+1.  Read the configuration for the specified schema (`users` or `products`).
+2.  Check if the dataset and table exist in BigQuery, creating them if necessary.
+3.  Start a BigQuery load job to stream the data from the local `.jsonl` file into the target table.
+4.  Log the progress and final status of the load job.
