@@ -1,4 +1,3 @@
-
 # Spike: [Descriptive Title of the Spike]
 
 This directory contains experimental code for [briefly describe the purpose of the spike, e.g., "evaluating a new data processing library"].
@@ -48,7 +47,10 @@ Before you begin, ensure you have the following installed:
 
 To run the main script for this spike, execute the following command:
 
-```bash
-# Example:
-# python main.py --input-file data/sample.json
+```sh
+# To add the sample data to the BigQuery table:
+python add_raw_review_to_bigquery.py --action add
+
+# To delete all data from the BigQuery table:
+python add_raw_review_to_bigquery.py --action delete
 ```
