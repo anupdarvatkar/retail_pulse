@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 from config import BASE_URL, CSS_SELECTOR, REQUIRED_KEYS
 from utils.data_utils import (
-    save_venues_to_csv,
+    save_reviews_to_csv,
 )
 from utils.scraper_utils import (
     fetch_and_process_page,
@@ -16,18 +16,18 @@ from utils.scraper_utils import (
 load_dotenv()
 
 
-async def crawl_venues():
+async def crawl_amazon_reviews():
     """
-    Main function to crawl venue data from the website.
+    Main function to crawl amazon reviews.
     """
     # Initialize configurations
     browser_config = get_browser_config()
     llm_strategy = get_llm_strategy()
-    session_id = "venue_crawl_session"
+    session_id = "amazon_crawl_session"
 
     # Initialize state variables
     page_number = 1
-    all_venues = []
+    all_reviews = []
     seen_names = set()
 
     # Start the web crawler context
@@ -35,7 +35,7 @@ async def crawl_venues():
     async with AsyncWebCrawler(config=browser_config) as crawler:
         while True:
             # Fetch and process data from the current page
-            venues, no_results_found = await fetch_and_process_page(
+            reviews, no_results_found = await fetch_and_process_page(
                 crawler,
                 page_number,
                 BASE_URL,
@@ -47,26 +47,26 @@ async def crawl_venues():
             )
 
             if no_results_found:
-                print("No more venues found. Ending crawl.")
+                print("No more reviews found. Ending crawl.")
                 break  # Stop crawling when "No Results Found" message appears
 
-            if not venues:
-                print(f"No venues extracted from page {page_number}.")
-                break  # Stop if no venues are extracted
+            if not reviews:
+                print(f"No reviews extracted from page {page_number}.")
+                break  # Stop if no reviews are extracted
 
-            # Add the venues from this page to the total list
-            all_venues.extend(venues)
+            # Add the reviews from this page to the total list
+            all_reviews.extend(reviews)
             page_number += 1  # Move to the next page
 
             # Pause between requests to be polite and avoid rate limits
             await asyncio.sleep(2)  # Adjust sleep time as needed
 
-    # Save the collected venues to a CSV file
-    if all_venues:
-        save_venues_to_csv(all_venues, "complete_venues.csv")
-        print(f"Saved {len(all_venues)} venues to 'complete_venues.csv'.")
+    # Save the collected reviews to a CSV file
+    if all_reviews:
+        save_reviews_to_csv(all_reviews, "complete_reviews.csv")
+        print(f"Saved {len(all_reviews)} reviews to 'complete_reviews.csv'.")
     else:
-        print("No venues were found during the crawl.")
+        print("No reviews were found during the crawl.")
 
     # Display usage statistics for the LLM strategy
     llm_strategy.show_usage()
@@ -76,7 +76,7 @@ async def main():
     """
     Entry point of the script.
     """
-    await crawl_venues()
+    await crawl_amazon_reviews()
 
 
 if __name__ == "__main__":

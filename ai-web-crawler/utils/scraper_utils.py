@@ -8,10 +8,11 @@ from crawl4ai import (
     CacheMode,
     CrawlerRunConfig,
     LLMExtractionStrategy,
+    LLMConfig
 )
 
-from models.venue import Venue
-from utils.data_utils import is_complete_venue, is_duplicate_venue
+from models.review import Review
+from utils.data_utils import is_duplicate_review, is_complete_review
 
 
 def get_browser_config() -> BrowserConfig:
@@ -38,13 +39,13 @@ def get_llm_strategy() -> LLMExtractionStrategy:
     """
     # https://docs.crawl4ai.com/api/strategies/#llmextractionstrategy
     return LLMExtractionStrategy(
-        provider="groq/deepseek-r1-distill-llama-70b",  # Name of the LLM provider
-        api_token=os.getenv("GROQ_API_KEY"),  # API token for authentication
-        schema=Venue.model_json_schema(),  # JSON schema of the data model
+        #provider="groq/deepseek-r1-distill-llama-70b",  # Name of the LLM provider
+        llm_config = LLMConfig(provider="groq/llama-3.1-8b-instant", api_token=os.getenv("GROQ_API_KEY")),
+        schema=Review.model_json_schema(),  # JSON schema of the data model
         extraction_type="schema",  # Type of extraction to perform
         instruction=(
-            "Extract all venue objects with 'name', 'location', 'price', 'capacity', "
-            "'rating', 'reviews', and a 1 sentence description of the venue from the "
+            "Extract all review objects with 'user', 'review date', 'rating', 'review' "
+            "and a 1 sentence description of the review from the "
             "following content."
         ),  # Instructions for the LLM
         input_format="markdown",  # Format of the input content
@@ -99,7 +100,7 @@ async def fetch_and_process_page(
     seen_names: Set[str],
 ) -> Tuple[List[dict], bool]:
     """
-    Fetches and processes a single page of venue data.
+    Fetches and processes a single page of review data.
 
     Args:
         crawler (AsyncWebCrawler): The web crawler instance.
@@ -108,12 +109,12 @@ async def fetch_and_process_page(
         css_selector (str): The CSS selector to target the content.
         llm_strategy (LLMExtractionStrategy): The LLM extraction strategy.
         session_id (str): The session identifier.
-        required_keys (List[str]): List of required keys in the venue data.
-        seen_names (Set[str]): Set of venue names that have already been seen.
+        required_keys (List[str]): List of required keys in the review data.
+        seen_names (Set[str]): Set of review names that have already been seen.
 
     Returns:
         Tuple[List[dict], bool]:
-            - List[dict]: A list of processed venues from the page.
+            - List[dict]: A list of processed reviews from the page.
             - bool: A flag indicating if the "No Results Found" message was encountered.
     """
     url = f"{base_url}?page={page_number}"
@@ -123,6 +124,8 @@ async def fetch_and_process_page(
     no_results = await check_no_results(crawler, url, session_id)
     if no_results:
         return [], True  # No more results, signal to stop crawling
+    
+    print(f"----------------{no_results}")
 
     # Fetch page content with the extraction strategy
     result = await crawler.arun(
@@ -130,10 +133,11 @@ async def fetch_and_process_page(
         config=CrawlerRunConfig(
             cache_mode=CacheMode.BYPASS,  # Do not use cached data
             extraction_strategy=llm_strategy,  # Strategy for data extraction
-            css_selector=css_selector,  # Target specific content on the page
+            #css_selector=css_selector,  # Target specific content on the page
             session_id=session_id,  # Unique session ID for the crawl
         ),
     )
+    print(f"----------------{result}")
 
     if not (result.success and result.extracted_content):
         print(f"Error fetching page {page_number}: {result.error_message}")
@@ -142,36 +146,36 @@ async def fetch_and_process_page(
     # Parse extracted content
     extracted_data = json.loads(result.extracted_content)
     if not extracted_data:
-        print(f"No venues found on page {page_number}.")
+        print(f"No reviews found on page {page_number}.")
         return [], False
 
     # After parsing extracted content
-    print("Extracted data:", extracted_data)
+    #print("Extracted data:", extracted_data)
 
-    # Process venues
-    complete_venues = []
-    for venue in extracted_data:
-        # Debugging: Print each venue to understand its structure
-        print("Processing venue:", venue)
+    # Process reviews
+    complete_reviews = []
+    for review in extracted_data:
+        # Debugging: Print each review to understand its structure
+        print("Processing review:", review)
 
         # Ignore the 'error' key if it's False
-        if venue.get("error") is False:
-            venue.pop("error", None)  # Remove the 'error' key if it's False
+        if review.get("error") is False:
+            review.pop("error", None)  # Remove the 'error' key if it's False
 
-        if not is_complete_venue(venue, required_keys):
-            continue  # Skip incomplete venues
+        if not is_complete_review(review, required_keys):
+            continue  # Skip incomplete reviews
 
-        if is_duplicate_venue(venue["name"], seen_names):
-            print(f"Duplicate venue '{venue['name']}' found. Skipping.")
-            continue  # Skip duplicate venues
+        if is_duplicate_review(review["name"], seen_names):
+            print(f"Duplicate review '{review['name']}' found. Skipping.")
+            continue  # Skip duplicate reviews
 
-        # Add venue to the list
-        seen_names.add(venue["name"])
-        complete_venues.append(venue)
+        # Add review to the list
+        seen_names.add(review["name"])
+        complete_reviews.append(review)
 
-    if not complete_venues:
-        print(f"No complete venues found on page {page_number}.")
+    if not complete_reviews:
+        print(f"No complete reviews found on page {page_number}.")
         return [], False
 
-    print(f"Extracted {len(complete_venues)} venues from page {page_number}.")
-    return complete_venues, False  # Continue crawling
+    print(f"Extracted {len(complete_reviews)} reviews from page {page_number}.")
+    return complete_reviews, False  # Continue crawling
